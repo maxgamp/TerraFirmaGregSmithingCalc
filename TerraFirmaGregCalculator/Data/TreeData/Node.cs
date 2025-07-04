@@ -16,8 +16,6 @@ public class Node
     private ISmithingMove? _move;
     public ISmithingMove? SmithingMove { get { return _move; } }
 
-    private List<Enum> _possibleMoves = new() { SmithingMoveTypeEnum.Punch, SmithingMoveTypeEnum.Bend, SmithingMoveTypeEnum.Upset, SmithingMoveTypeEnum.Shrink, SmithingMoveHitTypeEnum.Light, SmithingMoveHitTypeEnum.Medium, SmithingMoveHitTypeEnum.Hard, SmithingMoveTypeEnum.Draw };
-
     public Node(int goalPoints)
     {
         _currentPoints = goalPoints;
@@ -109,7 +107,7 @@ public class Node
         if (_children == null)
         {
             _children = new List<Node>();
-            var sortedList = new List<Enum>(_possibleMoves);
+            var sortedList = new List<Enum>(SmithingMoveHelper.PossibleMoves);
 
             sortedList.Sort((first, second) =>
             {

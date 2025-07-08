@@ -38,7 +38,7 @@ public class Node
         {
             _children = new List<Node>();
             var success = false;
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i <= 2; i++)
             {
                 var newNode = MakeNewNode(moveType, hitMoveArr[i]);
                 if (newNode != null)

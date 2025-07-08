@@ -10,63 +10,50 @@ using TerraFirmaGregCalculator.Data.TreeData;
 
 public class Program
 {
+	public Program()
+	{
+	}
 
-    private ISmithingMove[] MoveArr;
+	public static void Main(string[] args)
+	{
+		do
+		{
+			CalculateSmithingOrder();
+			Console.WriteLine("Press any key to clear the screen and begin anew.");
+			Console.ReadKey(true);
+			Console.Clear();
+		} while (true);
+	}
 
-    public Program()
-    {
-        MoveArr = [
-            new PositiveSmithingMove(SmithingMoveTypeEnum.Punch, 2),
-            new PositiveSmithingMove(SmithingMoveTypeEnum.Bend, 7),
-            new PositiveSmithingMove(SmithingMoveTypeEnum.Upset, 13),
-            new PositiveSmithingMove(SmithingMoveTypeEnum.Shrink, 16),
-            new NegativeSmithingMoveHit( SmithingMoveHitTypeEnum.Light, 3),
-            new NegativeSmithingMoveHit(SmithingMoveHitTypeEnum.Medium, 6),
-            new NegativeSmithingMoveHit(SmithingMoveHitTypeEnum.Hard, 9),
-            new NegativeSmithingMove(SmithingMoveTypeEnum.Draw, 15)
-        ];
-    }
+	private static void CalculateSmithingOrder()
+	{
+		bool success = false;
+		int goalSum = 0;
+		List<SmithingMoveTypeEnum> finishingMoves = new List<SmithingMoveTypeEnum>();
 
-    public static void Main(string[] args)
-    {
-        do
-        {
-            CalculateSmithingOrder();
-            Console.WriteLine("Press any key to clear the screen and begin anew.");
-            Console.ReadKey(true);
-            Console.Clear();
-        } while (true);
-    }
+		do
+		{
+			Console.WriteLine("Input goal sum: ");
 
-    private static void CalculateSmithingOrder()
-    {
-        bool success = false;
-        int goalSum = 0;
-        List<SmithingMoveTypeEnum> finishingMoves = new List<SmithingMoveTypeEnum>();
+			var numInput = Console.ReadLine();
 
-        do
-        {
-            Console.WriteLine("Input goal sum: ");
+			success = int.TryParse(numInput, out goalSum);
 
-            var numInput = Console.ReadLine();
+			if (goalSum <= 0 || goalSum >= 151)
+			{
+				Console.WriteLine("Value has to be greater than 0 and lower than 151");
+				success = false;
+			}
+		} while (success != true);
 
-            success = int.TryParse(numInput, out goalSum);
+		success = false;
 
-            if (goalSum <= 0 || goalSum >= 151)
-            {
-                Console.WriteLine("Value has to be greater than 0 and lower than 151");
-                success = false;
-            }
-        } while (success != true);
-
-        success = false;
-
-        do
-        {
-            Console.Clear();
-            var position = finishingMoves.Count == 0 ? "last" : finishingMoves.Count == 1 ? "second last" : "third last";
-            var selectedMoves = "- " + string.Join("\n- ", finishingMoves.Select(move => move));
-            Console.WriteLine($"""
+		do
+		{
+			Console.Clear();
+			var position = finishingMoves.Count == 0 ? "last" : finishingMoves.Count == 1 ? "second last" : "third last";
+			var selectedMoves = "- " + string.Join("\n- ", finishingMoves.Select(move => move));
+			Console.WriteLine($"""
                 Choose the the {position} move:
                 [P]unch
                 [B]end
@@ -75,294 +62,301 @@ public class Program
                 [H]it
                 [D]raw
                 ---------------------------------
-                [E]xit
+                [R]emove last picked option
+                [C]alculate
 
                 Selected options:
                 {selectedMoves}
                 """);
 
-            var choice = Console.ReadKey(true);
+			var choice = Console.ReadKey(true);
 
-            if (choice.Key == ConsoleKey.E)
-            {
-                break;
-            }
+			if (choice.Key == ConsoleKey.C)
+			{
+				break;
+			}
+			if (choice.Key == ConsoleKey.R)
+			{
+				finishingMoves.RemoveAt(finishingMoves.Count - 1);
+				continue;
+			}
 
-            var smithingMove = ChooseSmithingMove(choice);
+			var smithingMove = ChooseSmithingMove(choice);
 
-            if (smithingMove != null)
-            {
-                finishingMoves.Add((SmithingMoveTypeEnum)smithingMove);
-            }
-            else
-            {
-                Console.WriteLine($"Could not find character {choice.Key} in switch expression.");
-                Console.ReadKey(true);
-            }
-        } while (success != true);
-
-
-        var rootNode = new Node(-goalSum);
-
-        foreach (var move in finishingMoves)
-        {
-            if (move == SmithingMoveTypeEnum.Hit)
-            {
-                rootNode.NextLayerDefinedMoveAllHits(move);
-            }
-            else
-            {
-                rootNode.NextLayerDefinedMove(move);
-            }
-        }
-
-        long lastTimestamp = Stopwatch.GetTimestamp();
-        var ttl = 4;
-        do
-        {
-            success = rootNode.NextLayerNBestMoves(ttl, 2);
-            ttl++;
-
-            Console.WriteLine("TTL: " + ttl + "\nTime since in Seconds: " + Stopwatch.GetElapsedTime(lastTimestamp).TotalSeconds);
-            lastTimestamp = Stopwatch.GetTimestamp();
-        } while (success != true);
-
-        var wholeTree = rootNode.GetTree();
-
-        var correctPaths = rootNode.GetCorrectPaths();
-
-        Console.WriteLine($"TargetScore: {goalSum}.\n");
-        ArgumentNullException.ThrowIfNull(correctPaths);
-
-        correctPaths.Sort((first, second) => first.MoveCount.CompareTo(second.MoveCount));
-
-        var fastestApproach = correctPaths.First();
-
-        List<ISmithingMove> fastestApproachMoveList = fastestApproach.MoveList.Where(node => node.SmithingMove != null).ToList().ConvertAll(node => node.SmithingMove! as ISmithingMove);
-
-        var optimizedList = FixTreeGoingNegative(fastestApproachMoveList, finishingMoves.Count);
-
-        var simplifiedList = SimplifyTree(optimizedList, finishingMoves.Count);
-
-        //Console.WriteLine("FixedTree/OutputSimple:\n" + MakeTreeOutputSimple(optimizedList) + "\n");
-        //Console.WriteLine("FixedTree/OutputCombined:\n" + MakeTreeOutputCombined(optimizedList) + "\n");
-
-        //Console.WriteLine("SimplifiedTree/OutputSimple:\n" + MakeTreeOutputSimple(simplifiedList) + "\n");
-        Console.WriteLine("SimplifiedTree/OutputCombined:\n" + MakeTreeOutputCombined(simplifiedList) + "\n");
-
-        //Console.WriteLine("\nOriginaloutput: \n" + MakeTreeOutputSimple(fastestApproachMoveList));
-    }
-
-    private static SmithingMoveTypeEnum? ChooseSmithingMove(ConsoleKeyInfo key) => key.Key switch
-    {
-        ConsoleKey.P => SmithingMoveTypeEnum.Punch,
-        ConsoleKey.B => SmithingMoveTypeEnum.Bend,
-        ConsoleKey.U => SmithingMoveTypeEnum.Upset,
-        ConsoleKey.S => SmithingMoveTypeEnum.Shrink,
-        ConsoleKey.H => SmithingMoveTypeEnum.Hit,
-        ConsoleKey.D => SmithingMoveTypeEnum.Draw,
-        _ => null,
-    };
+			if (smithingMove != null)
+			{
+				finishingMoves.Add((SmithingMoveTypeEnum)smithingMove);
+			}
+			else
+			{
+				Console.Clear();
+				Console.WriteLine($"Could not find character {choice.Key} in switch expression.\n[Press any key to continue]");
+				Console.ReadKey(true);
+			}
+		} while (success != true);
 
 
-    private static List<ISmithingMove> FixTreeGoingNegative(List<ISmithingMove> originalList, int finishingMovesCount)
-    {
-        var optimizedList = new List<ISmithingMove>();
-        List<ISmithingMove> movesToDo = new();
+		var rootNode = new Node(-goalSum);
 
-        int pointCount = 0;
+		foreach (var move in finishingMoves)
+		{
+			if (move == SmithingMoveTypeEnum.Hit)
+			{
+				rootNode.NextLayerDefinedMoveAllHits(move);
+			}
+			else
+			{
+				rootNode.NextLayerDefinedMove(move);
+			}
+		}
 
-        for (int i = 0; i < originalList.Count - finishingMovesCount; i++)
-        {
-            var curMove = originalList[i];
-            if (curMove is null)
-            {
-                Console.WriteLine(new ArgumentNullException(nameof(curMove)));
-                Console.WriteLine("Ran into an issue optimizing, displaying raw output.\n");
-                return originalList;
-            }
+		long lastTimestamp = Stopwatch.GetTimestamp();
+		var ttl = 4;
+		do
+		{
+			success = rootNode.NextLayerNBestMoves(ttl, 2);
+			ttl++;
 
-            if (pointCount + curMove.PointChange >= 0)
-            {
-                optimizedList.Add(curMove);
-                pointCount += curMove.PointChange;
-            }
-            else
-            {
-                movesToDo.Add(originalList[i]!);
-            }
-        }
+			Console.WriteLine("TTL: " + ttl + "\nTime since in Seconds: " + Stopwatch.GetElapsedTime(lastTimestamp).TotalSeconds);
+			lastTimestamp = Stopwatch.GetTimestamp();
+		} while (success != true);
 
-        var tmpPointCount = pointCount;
-        for (int i = 0; i < movesToDo.Count; i++)
-        {
-            if (tmpPointCount + movesToDo[i].PointChange >= 0)
-            {
-                optimizedList.Add(movesToDo[i]);
-                tmpPointCount += movesToDo[i].PointChange;
-            }
-            else
-            {
-                Console.WriteLine(new ArgumentOutOfRangeException(nameof(movesToDo)));
-                Console.WriteLine("Ran into an issue optimizing, displaying raw output.\n");
-                return originalList;
-            }
-        }
+		var wholeTree = rootNode.GetTree();
 
-        for (int i = finishingMovesCount; i > 0; i--)
-        {
-            var nthLastMove = originalList[^i];
-            optimizedList.Add(nthLastMove);
-        }
+		var correctPaths = rootNode.GetCorrectPaths();
 
-        return optimizedList;
-    }
+		Console.WriteLine($"TargetScore: {goalSum}.\n");
+		ArgumentNullException.ThrowIfNull(correctPaths);
 
+		correctPaths.Sort((first, second) => first.MoveCount.CompareTo(second.MoveCount));
 
-    private static List<ISmithingMove> SimplifyTree(List<ISmithingMove> treeList, int finishingMovesCount)
-    {
-        Dictionary<Enum, int> moveCountDict = new(SmithingMoveHelper.PossibleMoves.ToDictionary(move => move, move => 0));
+		var fastestApproach = correctPaths.First();
 
-        var subListToExamine = treeList[0..^(finishingMovesCount - 1)]; // Look at the last finishing Move to determine if we can move other moves to the end
+		List<ISmithingMove> fastestApproachMoveList = fastestApproach.MoveList.Where(node => node.SmithingMove != null).ToList().ConvertAll(node => node.SmithingMove! as ISmithingMove);
 
-        foreach (var moveKey in moveCountDict.Keys)
-        {
-            int count = 0;
-            if (moveKey is SmithingMoveTypeEnum moveType)
-            {
-                count = subListToExamine.Where(treeMove => treeMove.MoveType == moveType).Count();
-            }
-            else if (moveKey is SmithingMoveHitTypeEnum moveTypeHit)
-            {
-                foreach (var move in subListToExamine)
-                {
-                    if (move is NegativeSmithingMoveHit smithingMoveHit && moveTypeHit == smithingMoveHit.HitType)
-                    {
-                        count++;
-                    }
-                }
-            }
+		var optimizedList = FixTreeGoingNegative(fastestApproachMoveList, finishingMoves.Count);
 
-            moveCountDict[moveKey] = count;
-        }
+		var simplifiedList = SimplifyTree(optimizedList, finishingMoves.Count);
 
-        var outputList = new List<ISmithingMove>();
-        var distinctList = subListToExamine.Distinct(new ISmithingMoveComparer()).ToList();
+		//Console.WriteLine("FixedTree/OutputSimple:\n" + MakeTreeOutputSimple(optimizedList) + "\n");
+		//Console.WriteLine("FixedTree/OutputCombined:\n" + MakeTreeOutputCombined(optimizedList) + "\n");
 
-        int GetCount(ISmithingMove move)
-        {
-            if (move is NegativeSmithingMoveHit moveHit)
-            {
-                return moveCountDict[moveHit.HitType!];
-            }
-            else if (move.MoveType is SmithingMoveTypeEnum moveType)
-            {
-                return moveCountDict[moveType];
-            }
-            return 0;
-        }
+		//Console.WriteLine("SimplifiedTree/OutputSimple:\n" + MakeTreeOutputSimple(simplifiedList) + "\n");
+		Console.WriteLine("SimplifiedTree/OutputCombined:\n" + MakeTreeOutputCombined(simplifiedList) + "\n");
 
-        var comparer = new ISmithingMoveComparer();
-        foreach (var move in distinctList)
-        {
-            if (comparer.Equals(move, subListToExamine.Last()))
-            {
-                continue;
-            }
+		//Console.WriteLine("\nOriginaloutput: \n" + MakeTreeOutputSimple(fastestApproachMoveList));
+	}
 
-            ArgumentNullException.ThrowIfNull(move);
-
-            int count = GetCount(move);
-
-            for (int i = 0; i < count; i++)
-            {
-                outputList.Add(move);
-            }
-        }
-
-        var finalMove = subListToExamine.Last();
-        ArgumentNullException.ThrowIfNull(finalMove);
-        for (int i = 0; i < GetCount(finalMove); i++)
-        {
-            outputList.Add(finalMove);
-        }
-
-        for (int i = (finishingMovesCount - 1); i >= 1; i--)
-        {
-            outputList.Add(treeList[^i]);
-        }
-
-        return outputList;
-    }
+	private static SmithingMoveTypeEnum? ChooseSmithingMove(ConsoleKeyInfo key) => key.Key switch
+	{
+		ConsoleKey.P => SmithingMoveTypeEnum.Punch,
+		ConsoleKey.B => SmithingMoveTypeEnum.Bend,
+		ConsoleKey.U => SmithingMoveTypeEnum.Upset,
+		ConsoleKey.S => SmithingMoveTypeEnum.Shrink,
+		ConsoleKey.H => SmithingMoveTypeEnum.Hit,
+		ConsoleKey.D => SmithingMoveTypeEnum.Draw,
+		_ => null,
+	};
 
 
-    private static string MakeTreeOutputSimple(List<ISmithingMove> treeList)
-    {
-        var output = "| Points | MoveName    | Change |\n";
+	private static List<ISmithingMove> FixTreeGoingNegative(List<ISmithingMove> originalList, int finishingMovesCount)
+	{
+		var optimizedList = new List<ISmithingMove>();
+		List<ISmithingMove> movesToDo = new();
 
-        int points = 0;
-        foreach (var move in treeList)
-        {
-            points += move.PointChange;
-            output +=
-            $"|  {points,-4:D3}  | {move?.GetSmithingMoveName() ?? "Done",-11} |   {(move?.PointChange >= 0 ? "+" : "") + move?.PointChange.ToString(),-3:D2}  |\n";
-        }
-        output += "---------------------------------";
+		int pointCount = 0;
 
-        return output;
-    }
+		for (int i = 0; i < originalList.Count - finishingMovesCount; i++)
+		{
+			var curMove = originalList[i];
+			if (curMove is null)
+			{
+				Console.WriteLine(new ArgumentNullException(nameof(curMove)));
+				Console.WriteLine("Ran into an issue optimizing, displaying raw output.\n");
+				return originalList;
+			}
 
-    private static string MakeTreeOutputCombined(List<ISmithingMove> treeList)
-    {
-        var sb = new StringBuilder();
+			if (pointCount + curMove.PointChange >= 0)
+			{
+				optimizedList.Add(curMove);
+				pointCount += curMove.PointChange;
+			}
+			else
+			{
+				movesToDo.Add(originalList[i]!);
+			}
+		}
 
-        sb.AppendLine("| Count | MoveName    | Change | Points |");
+		var tmpPointCount = pointCount;
+		for (int i = 0; i < movesToDo.Count; i++)
+		{
+			if (tmpPointCount + movesToDo[i].PointChange >= 0)
+			{
+				optimizedList.Add(movesToDo[i]);
+				tmpPointCount += movesToDo[i].PointChange;
+			}
+			else
+			{
+				Console.WriteLine(new ArgumentOutOfRangeException(nameof(movesToDo)));
+				Console.WriteLine("Ran into an issue optimizing, displaying raw output.\n");
+				return originalList;
+			}
+		}
 
-        int points = 0;
-        ISmithingMove? previousMove = null;
-        int moveRepeats = 0;
-        for (int i = 0; i < treeList.Count; i++)
-        {
-            var move = treeList[i];
-            if (previousMove != null)
-            {
-                if (i + 1 < treeList.Count
-                    && move.MoveType == treeList[i + 1]?.MoveType)
-                {
-                    moveRepeats++;
-                }
-                else
-                {
-                    points += (move.PointChange * moveRepeats);
-                    AddTreeLineToStringBuilder(sb, points, move, moveRepeats);
+		for (int i = finishingMovesCount; i > 0; i--)
+		{
+			var nthLastMove = originalList[^i];
+			optimizedList.Add(nthLastMove);
+		}
 
-                    moveRepeats = 0;
-                    previousMove = null;
-                }
-            }
-            else
-            {
-                if (i + 1 < treeList.Count
-                    && move.MoveType == treeList[i + 1]?.MoveType)
-                {
-                    previousMove = move;
-                    moveRepeats = 2;
-                    continue;
-                }
-                else
-                {
-                    points += move.PointChange;
-                    AddTreeLineToStringBuilder(sb, points, move, 1);
-                }
-            }
-        }
-        sb.AppendLine("-----------------------------------------");
+		return optimizedList;
+	}
 
-        return sb.ToString();
-    }
 
-    private static void AddTreeLineToStringBuilder(StringBuilder sb, int points, ISmithingMove move, int count)
-    {
-        sb.AppendLine($"|  {count,-3:D2}  | {move?.GetSmithingMoveName() ?? "Done",-11} |  {(move?.PointChange >= 0 ? "+" : "") + move?.PointChange.ToString(),-3:D2}   |  {points,-4:D3}  |");
-    }
+	private static List<ISmithingMove> SimplifyTree(List<ISmithingMove> treeList, int finishingMovesCount)
+	{
+		Dictionary<Enum, int> moveCountDict = new(SmithingMoveHelper.PossibleMoves.ToDictionary(move => move, move => 0));
+
+		var subListToExamine = treeList[0..^(finishingMovesCount - 1)]; // Look at the last finishing Move to determine if we can move other moves to the end
+
+		foreach (var moveKey in moveCountDict.Keys)
+		{
+			int count = 0;
+			if (moveKey is SmithingMoveTypeEnum moveType)
+			{
+				count = subListToExamine.Where(treeMove => treeMove.MoveType == moveType).Count();
+			}
+			else if (moveKey is SmithingMoveHitTypeEnum moveTypeHit)
+			{
+				foreach (var move in subListToExamine)
+				{
+					if (move is NegativeSmithingMoveHit smithingMoveHit && moveTypeHit == smithingMoveHit.HitType)
+					{
+						count++;
+					}
+				}
+			}
+
+			moveCountDict[moveKey] = count;
+		}
+
+		var outputList = new List<ISmithingMove>();
+		var distinctList = subListToExamine.Distinct(new ISmithingMoveComparer()).ToList();
+
+		int GetCount(ISmithingMove move)
+		{
+			if (move is NegativeSmithingMoveHit moveHit)
+			{
+				return moveCountDict[moveHit.HitType!];
+			}
+			else if (move.MoveType is SmithingMoveTypeEnum moveType)
+			{
+				return moveCountDict[moveType];
+			}
+			return 0;
+		}
+
+		var comparer = new ISmithingMoveComparer();
+		foreach (var move in distinctList)
+		{
+			if (comparer.Equals(move, subListToExamine.Last()))
+			{
+				continue;
+			}
+
+			ArgumentNullException.ThrowIfNull(move);
+
+			int count = GetCount(move);
+
+			for (int i = 0; i < count; i++)
+			{
+				outputList.Add(move);
+			}
+		}
+
+		var finalMove = subListToExamine.Last();
+		ArgumentNullException.ThrowIfNull(finalMove);
+		for (int i = 0; i < GetCount(finalMove); i++)
+		{
+			outputList.Add(finalMove);
+		}
+
+		for (int i = (finishingMovesCount - 1); i >= 1; i--)
+		{
+			outputList.Add(treeList[^i]);
+		}
+
+		return outputList;
+	}
+
+
+	private static string MakeTreeOutputSimple(List<ISmithingMove> treeList)
+	{
+		var output = "| Points | MoveName    | Change |\n";
+
+		int points = 0;
+		foreach (var move in treeList)
+		{
+			points += move.PointChange;
+			output +=
+			$"|  {points,-4:D3}  | {move?.GetSmithingMoveName() ?? "Done",-11} |   {(move?.PointChange >= 0 ? "+" : "") + move?.PointChange.ToString(),-3:D2}  |\n";
+		}
+		output += "---------------------------------";
+
+		return output;
+	}
+
+	private static string MakeTreeOutputCombined(List<ISmithingMove> treeList)
+	{
+		var sb = new StringBuilder();
+
+		sb.AppendLine("| Count | MoveName    | Change | Points |");
+
+		int points = 0;
+		ISmithingMove? previousMove = null;
+		int moveRepeats = 0;
+		for (int i = 0; i < treeList.Count; i++)
+		{
+			var move = treeList[i];
+			if (previousMove != null)
+			{
+				if (i + 1 < treeList.Count
+					&& move.MoveType == treeList[i + 1]?.MoveType)
+				{
+					moveRepeats++;
+				}
+				else
+				{
+					points += (move.PointChange * moveRepeats);
+					AddTreeLineToStringBuilder(sb, points, move, moveRepeats);
+
+					moveRepeats = 0;
+					previousMove = null;
+				}
+			}
+			else
+			{
+				if (i + 1 < treeList.Count
+					&& move.MoveType == treeList[i + 1]?.MoveType)
+				{
+					previousMove = move;
+					moveRepeats = 2;
+					continue;
+				}
+				else
+				{
+					points += move.PointChange;
+					AddTreeLineToStringBuilder(sb, points, move, 1);
+				}
+			}
+		}
+		sb.AppendLine("-----------------------------------------");
+
+		return sb.ToString();
+	}
+
+	private static void AddTreeLineToStringBuilder(StringBuilder sb, int points, ISmithingMove move, int count)
+	{
+		sb.AppendLine($"|  {count,-3:D2}  | {move?.GetSmithingMoveName() ?? "Done",-11} |  {(move?.PointChange >= 0 ? "+" : "") + move?.PointChange.ToString(),-3:D2}   |  {points,-4:D3}  |");
+	}
 }

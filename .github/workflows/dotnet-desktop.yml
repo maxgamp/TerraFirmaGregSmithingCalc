@@ -1,19 +1,19 @@
 name: .NET Core Desktop
 
 on:
-  #push:
-  #  branches: [ "main" ]
+  push:
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
   build:
-    runs-on: windows-latest  # For a list of available runner types, refer to
-                             # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
+    runs-on: windows-latest
 
     env:
-      Solution_Name: TerraFirmaGregCalculator.sln                         # Replace with your solution name, i.e. MyWpfApp.sln.
-#      Test_Project_Path: your-test-project-path                 # Replace with the path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
+      Solution_Name: TerraFirmaGregCalculator.sln
+      Output_Dir_Name: ./Release
+      Test_Project_Path: ./Tests/TerraFirmaGregCalculator.Test/TerraFirmaGregCalculator.Test.csproj
 
     steps:
     - name: Checkout
@@ -21,33 +21,14 @@ jobs:
       with:
         fetch-depth: 0
 
-    # Install the .NET Core workload
     - name: Install .NET Core
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
 
-    - name: Publish win-x64
-      run: dotnet publish ${{ env.Solution_Name }} -c Release -o Release /p:DebugSymbols=false
+    - name: Run unittests
+      run: dotnet test ${{ env.Test_Project_Path }}
 
-    - name: Upload Application Asset
-      id: upload-release-client-win-asset 
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./Release/TerraFirmaGregCalculator.exe
-        asset_name: TerraFirmaGregCalculator.exe
-        asset_content_type: application/exe
-    
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: release-${{ steps.date.outputs.date }}
-        release_name: Release ${{ steps.date.outputs.date }}
-        draft: false
-        prerelease: false
+#    - name: Publish
+#      run: dotnet publish ${{ env.Solution_Name }} -c Release -o ${{ env.Output_Dir_Name }}
+

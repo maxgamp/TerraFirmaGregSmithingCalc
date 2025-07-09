@@ -1,20 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace TerraFirmaGregCalculator.Data.TreeData;
 
 public class Node
 {
-
     private List<Node>? _children;
-
-
     private int _currentPoints;
-    public int CurrentPoints { get { return _currentPoints; } }
-
     private ISmithingMove? _move;
+
+    public int CurrentPoints { get { return _currentPoints; } }
     public ISmithingMove? SmithingMove { get { return _move; } }
+    public bool ReachedGoalPoints { get => _currentPoints == 0 && _children == null; }
 
     public Node(int goalPoints)
     {
@@ -44,7 +43,7 @@ public class Node
                 if (newNode != null)
                 {
                     _children.Add(newNode);
-                    success = newNode.ReachedGoalPoints();
+                    success = newNode.ReachedGoalPoints;
                 }
                 else
                 {
@@ -78,7 +77,7 @@ public class Node
             if (newNode != null)
             {
                 _children.Add(newNode);
-                return newNode.ReachedGoalPoints();
+                return newNode.ReachedGoalPoints;
             }
             else
             {
@@ -124,11 +123,28 @@ public class Node
 
             foreach (var move in movesToDo)
             {
-                var newNode = MakeNewNode(move);
+                Node? newNode = null;
+                //if (NodeTraversingHelper.CanStartNewThread())
+                //{
+                //    ThreadPool.QueueUserWorkItem((e) =>
+                //    {
+                //        newNode = MakeNewNode(move);
 
-                ArgumentNullException.ThrowIfNull(newNode);
+                //        ArgumentNullException.ThrowIfNull(newNode);
 
-                _children.Add(newNode);
+                //        _children.Add(newNode);
+                //    });
+                //}
+                //else
+                //{
+                    newNode = MakeNewNode(move);
+
+                    ArgumentNullException.ThrowIfNull(newNode);
+
+                    _children.Add(newNode);
+                //}
+
+
             }
         }
         else
@@ -141,7 +157,7 @@ public class Node
             if (success)
                 return true;
         }
-        if (_children?.Any(child => child.ReachedGoalPoints()) == true)
+        if (_children?.Any(child => child.ReachedGoalPoints) == true)
             return true;
         return false;
     }
@@ -166,7 +182,7 @@ public class Node
     {
         if (_children == null)
         {
-            if (ReachedGoalPoints())
+            if (ReachedGoalPoints)
             {
                 return [new(this)];
             }
@@ -210,11 +226,6 @@ public class Node
         }
 
         return output;
-    }
-
-    private bool ReachedGoalPoints()
-    {
-        return _currentPoints == 0;
     }
 
     private Node? MakeNewNode(SmithingMoveTypeEnum move, SmithingMoveHitTypeEnum? hitMove = null)

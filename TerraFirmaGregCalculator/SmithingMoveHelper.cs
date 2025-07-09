@@ -16,8 +16,9 @@ public static class SmithingMoveHelper
         if (moveType is null)
             return 0;
 
-        var foundPointChange = MovesAndTheirPointsValues.Where(entry => entry.move == moveType).Select(entry => entry.pointChange).FirstOrDefault();
-
+        int foundPointChange = 0;
+        foundPointChange = MovesAndTheirPointsValues.Where(entry => Enum.Equals(entry.move, moveType)).Select(entry => entry.pointChange).FirstOrDefault();
+        
         if (foundPointChange == 0)
         {
             throw new KeyNotFoundException($"Couldn't find the move {moveType} in the pre-defined moves in {nameof(SmithingMoveHelper)}.");

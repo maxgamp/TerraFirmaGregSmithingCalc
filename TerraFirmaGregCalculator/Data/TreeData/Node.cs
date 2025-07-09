@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 
 namespace TerraFirmaGregCalculator.Data.TreeData;
 
@@ -137,14 +136,12 @@ public class Node
                 //}
                 //else
                 //{
-                    newNode = MakeNewNode(move);
+                newNode = MakeNewNode(move);
 
-                    ArgumentNullException.ThrowIfNull(newNode);
+                ArgumentNullException.ThrowIfNull(newNode);
 
-                    _children.Add(newNode);
+                _children.Add(newNode);
                 //}
-
-
             }
         }
         else

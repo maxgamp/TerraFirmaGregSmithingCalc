@@ -99,7 +99,7 @@ public class Program
         } while (success != true);
 
 
-        var successfulApproaches = CalculateSmithingOrder(goalSum, finishingMoves, (ttl, timestamp) => { Console.WriteLine("TTL: " + ttl + "\nLayer time in seconds: " + Stopwatch.GetElapsedTime(timestamp).TotalSeconds); });
+        var successfulApproaches = CalculateSmithingOrder(goalSum, finishingMoves, (ttl, lastTimestamp, beginningTimestamp) => { Console.WriteLine($"TTL: {ttl} \nTotalTime: {Stopwatch.GetElapsedTime(beginningTimestamp).TotalSeconds} [S]\nLayerTime: {Stopwatch.GetElapsedTime(lastTimestamp).TotalSeconds} [S]"); });
 
 
         var fastestApproach = successfulApproaches[0];
@@ -116,7 +116,7 @@ public class Program
         Console.WriteLine("SimplifiedTree/OutputCombined:\n" + MakeTreeOutputCombined(simplifiedList) + "\n");
     }
 
-    public static List<MoveListObject> CalculateSmithingOrder(int goalSum, List<SmithingMoveTypeEnum> finishingMoves, Action<int, long> logLayerCalculationDone)
+    public static List<MoveListObject> CalculateSmithingOrder(int goalSum, List<SmithingMoveTypeEnum> finishingMoves, Action<int, long, long> logLayerCalculationDone)
     {
         var rootNode = new Node(-goalSum);
         var success = false;
@@ -134,13 +134,14 @@ public class Program
         }
 
         long lastTimestamp = Stopwatch.GetTimestamp();
+        long beginningTimestamp = lastTimestamp;
         var ttl = 4;
         do
         {
             success = rootNode.NextLayerNBestMoves(ttl, 2);
             ttl++;
 
-            logLayerCalculationDone(ttl, lastTimestamp);
+            logLayerCalculationDone(ttl, lastTimestamp, beginningTimestamp);
             lastTimestamp = Stopwatch.GetTimestamp();
         } while (success != true);
 

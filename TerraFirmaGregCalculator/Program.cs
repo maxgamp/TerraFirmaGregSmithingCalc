@@ -117,7 +117,7 @@ public class Program
 			success = rootNode.NextLayerNBestMoves(ttl, 2);
 			ttl++;
 
-			Console.WriteLine("TTL: " + ttl + "\nTime since in Seconds: " + Stopwatch.GetElapsedTime(lastTimestamp).TotalSeconds);
+			Console.WriteLine("TTL: " + ttl + "\nLayer time in seconds: " + Stopwatch.GetElapsedTime(lastTimestamp).TotalSeconds);
 			lastTimestamp = Stopwatch.GetTimestamp();
 		} while (success != true);
 

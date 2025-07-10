@@ -18,7 +18,7 @@ public class UnitTest1
         {
             foreach (var finishingMoves in _probableFinishingMoves)
             {
-                var result = Program.CalculateSmithingOrder(i, finishingMoves, (_, _) => { });
+                var result = Program.CalculateSmithingOrder(i, finishingMoves, (_, _, _) => { });
 
                 var everythingIsRight = result.All(entry => entry.MoveList.Last().CurrentPoints == 0);
 
@@ -27,7 +27,6 @@ public class UnitTest1
                     failedCombinations.TryAdd(finishingMoves, i);
                 }
             }
-
         });
 
         Assert.Empty(failedCombinations);

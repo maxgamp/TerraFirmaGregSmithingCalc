@@ -11,24 +11,25 @@ public static class BiDirectionalBFS
 {
     public static ConcurrentDictionary<int, List<ISmithingMove>> BuildBackwardsMap(int targetPoints, int maxDepth, List<SmithingMoveTypeEnum> allMoves, List<SmithingMoveTypeEnum> finishingMoveTypes)
     {
-        var visited = new ConcurrentDictionary<int, List<ISmithingMove>>();
-        visited[targetPoints] = new List<ISmithingMove>();
+        var visited = new ConcurrentDictionary<(int, int finishersUsed), List<ISmithingMove>>();
+        visited[(targetPoints, 0)] = new List<ISmithingMove>();
 
-        var frontier = new ConcurrentQueue<int>();
-        frontier.Enqueue(targetPoints);
+        var frontier = new ConcurrentQueue<(int points, int finishersUsed)>();
+        frontier.Enqueue((targetPoints, 0));
 
         for (int depth = 1; depth <= maxDepth; depth++)
         {
-            var next = new ConcurrentQueue<int>();
-            Parallel.ForEach(frontier, points =>
+            var next = new ConcurrentQueue<(int, int)>();
+            Parallel.ForEach(frontier, current =>
             {
-                var workingPath = visited[points];
-                int usedFinishers = workingPath.Count;
+                var (points, finishersUsed) = current;
+
+                var workingPath = visited[current];
 
                 IEnumerable<SmithingMoveTypeEnum> moveTypesToTry;
-                if (usedFinishers < finishingMoveTypes.Count)
+                if (finishersUsed < finishingMoveTypes.Count)
                 {
-                    var finishingMove = finishingMoveTypes[finishingMoveTypes.Count - usedFinishers - 1];
+                    var finishingMove = finishingMoveTypes[finishingMoveTypes.Count - finishersUsed - 1];
                     moveTypesToTry = [finishingMove];
                 }
                 else
@@ -42,12 +43,17 @@ public static class BiDirectionalBFS
 
                     foreach (var move in movesToDo)
                     {
-                        int previous = points - move.PointChange;
-                        if (previous <= 0 || previous >= 140) continue;
+                        int nextPoints = points - move.PointChange;
+                        if (nextPoints <= -50 || nextPoints >= 200) continue;
 
-                        if (visited.TryAdd(previous, new List<ISmithingMove>(workingPath) { move }))
+                        int nextFinisherUsed = finishersUsed + (finishersUsed < finishingMoveTypes.Count ? 1 : 0);
+                        var key = (nextPoints, nextFinisherUsed);
+
+                        var newPath = new List<ISmithingMove>(workingPath) { move };
+
+                        if (visited.TryAdd(key, newPath))
                         {
-                            next.Enqueue(previous);
+                            next.Enqueue(key);
                         }
                     }
                 }
@@ -60,7 +66,19 @@ public static class BiDirectionalBFS
             frontier = next;
         }
 
-        return visited;
+        var result = new ConcurrentDictionary<int, List<ISmithingMove>>();
+
+        foreach (var kvp in visited)
+        {
+            var (points, _) = kvp.Key;
+            if (result.ContainsKey(points) != true || kvp.Value.Count < result[points].Count)
+            {
+                result[points] = kvp.Value;
+            }
+
+        }
+
+        return result;
     }
 
     public static List<ISmithingMove>? SearchForwardsAndMeet(int startPoints, int goalPoints, List<SmithingMoveTypeEnum> allMoves, ConcurrentDictionary<int, List<ISmithingMove>> backwardDict, int maxDepth)
@@ -97,7 +115,7 @@ public static class BiDirectionalBFS
                         foreach (var move in movesToDo)
                         {
                             int nextPoints = points + move.PointChange;
-                            if (nextPoints <= 0 || nextPoints >= 140) continue;
+                            if (nextPoints <= -50 || nextPoints >= 200) continue;
 
                             if (backwardDict.TryGetValue(nextPoints, out var backPath))
                             {

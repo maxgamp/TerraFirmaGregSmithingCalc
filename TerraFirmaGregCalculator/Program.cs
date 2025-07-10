@@ -11,7 +11,7 @@ namespace TerraFirmaGregCalculator;
 public class Program
 {
     private static int _maxDepth;
-    private static TreeTraversalModeEnum _traversalMode;
+    private static bool _assumeStartingPointsZero;
 
     public static void Main(string[] args)
     {
@@ -25,8 +25,8 @@ public class Program
 
         config.GetSection(nameof(CalculatorSettings)).Bind(calculatorSettings);
 
-        _maxDepth = calculatorSettings?.MaxDepth ?? 32;
-        _traversalMode = calculatorSettings?.TreeTraversalMode ?? TreeTraversalModeEnum.BiDirectional;
+        _maxDepth = calculatorSettings?.MaxDepth ?? 64;
+        _assumeStartingPointsZero = calculatorSettings?.AssumeStartingPointsZero ?? true;
 
         do
         {
@@ -44,20 +44,23 @@ public class Program
         int startPoints = 0;
         List<SmithingMoveTypeEnum> finishingMoves = new List<SmithingMoveTypeEnum>();
 
-        do
+        if (_assumeStartingPointsZero != true)
         {
-            Console.WriteLine("Input starting points: ");
-            var numInput = Console.ReadLine();
-
-            success = int.TryParse(numInput, out startPoints);
-
-            if (startPoints < 0 || targetPoints > 150)
+            do
             {
-                Console.WriteLine("Value has to be between 0 and 150.");
-                success = false;
-            }
+                Console.WriteLine("Input starting points: ");
+                var numInput = Console.ReadLine();
 
-        } while (success != true);
+                success = int.TryParse(numInput, out startPoints);
+
+                if (startPoints < 0 || targetPoints > 150)
+                {
+                    Console.WriteLine("Value has to be between 0 and 150.");
+                    success = false;
+                }
+
+            } while (success != true);
+        }
 
         do
         {
@@ -123,15 +126,7 @@ public class Program
             }
         } while (success != true);
 
-        List<ISmithingMove>? bestPath;
-        switch (_traversalMode)
-        {
-            case TreeTraversalModeEnum.BiDirectional:
-                bestPath = CalculateSmithingOrderBiDirectional(startPoints, targetPoints, finishingMoves, SmithingMoveHelper.AllMoves, _maxDepth);
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(_traversalMode));
-        }
+        List<ISmithingMove>? bestPath = CalculateSmithingOrderBiDirectional(startPoints, targetPoints, finishingMoves, SmithingMoveHelper.AllMoves, _maxDepth);
 
         if (bestPath == null || bestPath.Count == 0)
         {

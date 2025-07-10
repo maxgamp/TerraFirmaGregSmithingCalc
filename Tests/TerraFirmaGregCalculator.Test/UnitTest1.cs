@@ -6,18 +6,21 @@ public class UnitTest1
 {
     private static List<SmithingMoveTypeEnum>[] _probableFinishingMoves =
     [
-        //new() { SmithingMoveTypeEnum.Hit, SmithingMoveTypeEnum.Shrink, SmithingMoveTypeEnum.Draw },
-        //new() { SmithingMoveTypeEnum.Bend, SmithingMoveTypeEnum.Draw, SmithingMoveTypeEnum.Draw },
-        new() {  SmithingMoveTypeEnum.Shrink }
+        new() { SmithingMoveTypeEnum.Hit, SmithingMoveTypeEnum.Shrink, SmithingMoveTypeEnum.Draw },
+        new() { SmithingMoveTypeEnum.Bend, SmithingMoveTypeEnum.Draw, SmithingMoveTypeEnum.Draw },
+        new() {  SmithingMoveTypeEnum.Hit, SmithingMoveTypeEnum.Hit, SmithingMoveTypeEnum.Hit },
+        new() {  SmithingMoveTypeEnum.Hit, SmithingMoveTypeEnum.Draw, SmithingMoveTypeEnum.Hit },
+        new() {  SmithingMoveTypeEnum.Upset, SmithingMoveTypeEnum.Draw, SmithingMoveTypeEnum.Punch },
+        new() {  SmithingMoveTypeEnum.Shrink },
+        new() {  SmithingMoveTypeEnum.Upset },
+        new() {  SmithingMoveTypeEnum.Hit }
     ];
 
     [Fact]
     [Trait("Category", "UnitTest")]
     public void TestVariousCombinations()
     {
-        List<(List<SmithingMoveTypeEnum>, int)> failedCombinations = new();
-
-        for (int i = 5; i < 145; i++)
+        for (int i = 5; i < 149; i++)
         {
             foreach (var finishingMoves in _probableFinishingMoves)
             {
@@ -30,15 +33,7 @@ public class UnitTest1
                 var everythingIsRight = sum == i;
 
                 Assert.Equal(i, sum);
-
-                if (everythingIsRight != true)
-                {
-
-                    failedCombinations.Add((finishingMoves, i));
-                }
             }
         }
-
-        Assert.Empty(failedCombinations);
     }
 }

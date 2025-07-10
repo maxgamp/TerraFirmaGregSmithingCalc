@@ -3,5 +3,5 @@
 public class CalculatorSettings
 {
     public int? MaxDepth { get; set; }
-    public TreeTraversalModeEnum TreeTraversalMode { get; set; } = TreeTraversalModeEnum.BiDirectional;
+    public bool AssumeStartingPointsZero { get; set; } = true;
 }

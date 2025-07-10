@@ -1,6 +1,6 @@
 {
   "CalculatorSettings": {
-    "MaxDepth": 256,
-    "TreeTraversalMode": "BiDirectional"
+    "MaxDepth": 64,
+    "TreeTraversalMode": "AssumeStartingPointsZero"
   }
 }

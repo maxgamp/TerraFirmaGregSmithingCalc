@@ -1,23 +1,32 @@
-﻿
+﻿using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using TerraFirmaGregCalculator;
 using TerraFirmaGregCalculator.Data;
-using TerraFirmaGregCalculator.Data.TreeData;
+
+namespace TerraFirmaGregCalculator;
 
 public class Program
 {
-    public Program()
-    {
-    }
+    private static int _maxDepth;
+    private static TreeTraversalModeEnum _traversalMode;
 
     public static void Main(string[] args)
     {
-        ThreadPool.SetMaxThreads(52, 12);
+        var builder = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("config.json", optional: true);
+
+        IConfiguration config = builder.Build();
+
+        var calculatorSettings = new CalculatorSettings();
+
+        config.GetSection(nameof(CalculatorSettings)).Bind(calculatorSettings);
+
+        _maxDepth = calculatorSettings?.MaxDepth ?? 32;
+        _traversalMode = calculatorSettings?.TreeTraversalMode ?? TreeTraversalModeEnum.BiDirectional;
 
         do
         {
@@ -31,20 +40,36 @@ public class Program
     private static void HandleInputs()
     {
         bool success = false;
-        int goalSum = 0;
+        int targetPoints = 0;
+        int startPoints = 0;
         List<SmithingMoveTypeEnum> finishingMoves = new List<SmithingMoveTypeEnum>();
 
         do
         {
-            Console.WriteLine("Input goal sum: ");
+            Console.WriteLine("Input starting points: ");
+            var numInput = Console.ReadLine();
+
+            success = int.TryParse(numInput, out startPoints);
+
+            if (startPoints < 0 || targetPoints > 150)
+            {
+                Console.WriteLine("Value has to be between 0 and 150.");
+                success = false;
+            }
+
+        } while (success != true);
+
+        do
+        {
+            Console.WriteLine("Input target points: ");
 
             var numInput = Console.ReadLine();
 
-            success = int.TryParse(numInput, out goalSum);
+            success = int.TryParse(numInput, out targetPoints);
 
-            if (goalSum <= 0 || goalSum >= 151)
+            if (targetPoints <= 0 || targetPoints >= 150)
             {
-                Console.WriteLine("Value has to be greater than 0 and lower than 151");
+                Console.WriteLine("Value has to be greater than 0 and lower than 150");
                 success = false;
             }
         } while (success != true);
@@ -57,20 +82,20 @@ public class Program
             var position = finishingMoves.Count == 0 ? "last" : finishingMoves.Count == 1 ? "second last" : "third last";
             var selectedMoves = "- " + string.Join("\n- ", finishingMoves.Select(move => move));
             Console.WriteLine($"""
-                Choose the the {position} move:
-                [P]unch
-                [B]end
-                [U]pset
-                [S]hrink
-                [H]it
-                [D]raw
-                ---------------------------------
-                [R]emove last picked option
-                [C]alculate
+            Choose the the {position} move:
+            [P]unch
+            [B]end
+            [U]pset
+            [S]hrink
+            [H]it
+            [D]raw
+            ---------------------------------
+            [R]emove last picked option
+            [C]alculate
 
-                Selected options:
-                {selectedMoves}
-                """);
+            Selected options:
+            {selectedMoves}
+            """);
 
             var choice = Console.ReadKey(true);
 
@@ -98,64 +123,39 @@ public class Program
             }
         } while (success != true);
 
+        List<ISmithingMove>? bestPath;
+        switch (_traversalMode)
+        {
+            case TreeTraversalModeEnum.BiDirectional:
+                bestPath = CalculateSmithingOrderBiDirectional(startPoints, targetPoints, finishingMoves, SmithingMoveHelper.AllMoves, _maxDepth);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(_traversalMode));
+        }
 
-        var successfulApproaches = CalculateSmithingOrder(goalSum, finishingMoves, (ttl, lastTimestamp, beginningTimestamp) => { Console.WriteLine($"TTL: {ttl} \nTotalTime: {Stopwatch.GetElapsedTime(beginningTimestamp).TotalSeconds} [S]\nLayerTime: {Stopwatch.GetElapsedTime(lastTimestamp).TotalSeconds} [S]"); });
+        if (bestPath == null || bestPath.Count == 0)
+        {
+            Console.WriteLine("Couldn't find a path to target points, try again with increased maxPaths.");
+            return;
+        }
 
-
-        var fastestApproach = successfulApproaches[0];
-
-        List<ISmithingMove> fastestApproachMoveList = fastestApproach.MoveList.Where(node => node.SmithingMove != null).ToList().ConvertAll(node => node.SmithingMove! as ISmithingMove);
-
-        var optimizedList = FixTreeGoingNegative(fastestApproachMoveList, finishingMoves.Count);
+        var optimizedList = FixTreeGoingNegative(bestPath, finishingMoves.Count);
 
         var simplifiedList = SimplifyTree(optimizedList, finishingMoves.Count);
 
-
-        Console.WriteLine($"TargetScore: {goalSum}.\n");
+        Console.WriteLine($"TargetScore: {targetPoints}.\n");
 
         Console.WriteLine("SimplifiedTree/OutputCombined:\n" + MakeTreeOutputCombined(simplifiedList) + "\n");
     }
 
-    public static List<MoveListObject> CalculateSmithingOrder(int goalSum, List<SmithingMoveTypeEnum> finishingMoves, Action<int, long, long> logLayerCalculationDone)
+    public static List<ISmithingMove>? CalculateSmithingOrderBiDirectional(int startPoints, int goalPoints, List<SmithingMoveTypeEnum> finishingMoves, List<SmithingMoveTypeEnum> allMoves, int maxDepth)
     {
-        var rootNode = new Node(-goalSum);
-        var success = false;
+        var backwardsDict = BiDirectionalBFS.BuildBackwardsMap(goalPoints, maxDepth, allMoves, finishingMoves);
 
-        foreach (var move in finishingMoves)
-        {
-            if (move == SmithingMoveTypeEnum.Hit)
-            {
-                rootNode.NextLayerDefinedMoveAllHits(move);
-            }
-            else
-            {
-                rootNode.NextLayerDefinedMove(move);
-            }
-        }
+        var bestPath = BiDirectionalBFS.SearchForwardsAndMeet(startPoints, goalPoints, allMoves, backwardsDict, maxDepth);
 
-        long lastTimestamp = Stopwatch.GetTimestamp();
-        long beginningTimestamp = lastTimestamp;
-        var ttl = 4;
-        do
-        {
-            success = rootNode.NextLayerNBestMoves(ttl, 2);
-            ttl++;
-
-            logLayerCalculationDone(ttl, lastTimestamp, beginningTimestamp);
-            lastTimestamp = Stopwatch.GetTimestamp();
-        } while (success != true);
-
-        var wholeTree = rootNode.GetTree();
-
-        var correctPaths = rootNode.GetCorrectPaths();
-
-        ArgumentNullException.ThrowIfNull(correctPaths);
-
-        correctPaths.Sort((first, second) => first.MoveCount.CompareTo(second.MoveCount));
-
-        return correctPaths;
+        return bestPath;
     }
-
 
     private static SmithingMoveTypeEnum? ChooseSmithingMove(ConsoleKeyInfo key) => key.Key switch
     {
@@ -291,7 +291,7 @@ public class Program
             outputList.Add(finalMove);
         }
 
-        for (int i = (finishingMovesCount - 1); i >= 1; i--)
+        for (int i = finishingMovesCount - 1; i >= 1; i--)
         {
             outputList.Add(treeList[^i]);
         }
@@ -337,7 +337,7 @@ public class Program
                 }
                 else
                 {
-                    points += (move.PointChange * moveRepeats);
+                    points += move.PointChange * moveRepeats;
                     AddTreeLineToStringBuilder(sb, points, move, moveRepeats);
 
                     moveRepeats = 0;

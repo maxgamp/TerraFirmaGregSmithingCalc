@@ -1,33 +1,43 @@
-﻿
-using System.Collections.Concurrent;
-using TerraFirmaGregCalculator.Data;
+﻿using TerraFirmaGregCalculator.Data;
 
 namespace TerraFirmaGregCalculator.Test;
 
 public class UnitTest1
 {
-    private static List<SmithingMoveTypeEnum>[] _probableFinishingMoves = [new() { SmithingMoveTypeEnum.Hit, SmithingMoveTypeEnum.Shrink, SmithingMoveTypeEnum.Draw }, new() { }];
+    private static List<SmithingMoveTypeEnum>[] _probableFinishingMoves =
+    [
+        //new() { SmithingMoveTypeEnum.Hit, SmithingMoveTypeEnum.Shrink, SmithingMoveTypeEnum.Draw },
+        //new() { SmithingMoveTypeEnum.Bend, SmithingMoveTypeEnum.Draw, SmithingMoveTypeEnum.Draw },
+        new() {  SmithingMoveTypeEnum.Shrink }
+    ];
 
     [Fact]
     [Trait("Category", "UnitTest")]
     public void TestVariousCombinations()
     {
-        ConcurrentDictionary<List<SmithingMoveTypeEnum>, int> failedCombinations = new ConcurrentDictionary<List<SmithingMoveTypeEnum>, int>();
+        List<(List<SmithingMoveTypeEnum>, int)> failedCombinations = new();
 
-        var x = Parallel.For(1, 139, (i) =>
+        for (int i = 5; i < 145; i++)
         {
             foreach (var finishingMoves in _probableFinishingMoves)
             {
-                var result = Program.CalculateSmithingOrder(i, finishingMoves, (_, _, _) => { });
+                var backwardsDict = BiDirectionalBFS.BuildBackwardsMap(i, 64, SmithingMoveHelper.AllMoves, finishingMoves);
 
-                var everythingIsRight = result.All(entry => entry.MoveList.Last().CurrentPoints == 0);
+                var bestPath = BiDirectionalBFS.SearchForwardsAndMeet(0, i, SmithingMoveHelper.AllMoves, backwardsDict, 64);
 
-                if (everythingIsRight)
+                var sum = bestPath?.Sum(entry => entry.PointChange);
+
+                var everythingIsRight = sum == i;
+
+                Assert.Equal(i, sum);
+
+                if (everythingIsRight != true)
                 {
-                    failedCombinations.TryAdd(finishingMoves, i);
+
+                    failedCombinations.Add((finishingMoves, i));
                 }
             }
-        });
+        }
 
         Assert.Empty(failedCombinations);
     }

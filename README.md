@@ -5,7 +5,7 @@ Best used with the Texturepack that gives you the ability to read the required p
 It's [found here](https://www.curseforge.com/minecraft/texture-packs/tfc-anvil-helper), outdated but still works for me!
 
 ## How to use:
-By default you are only asked the point target you want to reach, this behaviour can be changed by setting "AssumeStartingPointsZero" to false in the config.json.\
+By default the application assumes the initial point value is 0 and you are only asked for the point target you want to reach, this behaviour can be changed by setting "AssumeStartingPointsZero" to false in the config.json.\
 Then you are asked to select the finishing moves from last to third last (from left to right as displayed in the game) and hit C to \[C\]alculate.\
 You should <sub>almost</sub> instantly get a list of moves which bring you to your target points, this is formatted like so:
 
